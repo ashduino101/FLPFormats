@@ -1,0 +1,40 @@
+uint16 u1;  // 3
+uint16 u2;  // 15
+uint32 dryMix;
+uint32 wetMix;
+int32 dryStereoSeparation;
+int32 wetStereoSeparation;
+byte mode;
+if (mode == 0) {
+    ubyte u3;  // 0
+    ubyte pathLen;
+    char path[pathLen];
+    uint32 sampleLen;
+    ubyte sample[sampleLen];
+} else {
+    ubyte pathLen;
+    char path[pathLen];    
+}
+double startOffset;
+double endOffset;
+double sampleStart;
+double sampleEnd;
+float u4;  // 0.02
+
+PointCollection panEnvelope;
+PointCollection volumeEnvelope;
+PointCollection stereoEnvelope;
+PointCollection allEnvelope;
+
+PointCollection impulseResponse;
+
+ubyte noAutoscroll;
+ubyte u6;  // 0
+ubyte u7;  // 1
+ubyte normalize;
+uint32 latency;
+int32 display;
+int32 delay;
+int32 selfConv;
+int32 stretch;
+int32 eq;
