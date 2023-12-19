@@ -1,0 +1,445 @@
+//------------------------------------------------
+//--- 010 Editor v14.0 Binary Template
+//
+//      File: FLP.bt
+//   Authors: ashduino101
+//   Version: 1.0
+//   Purpose: Binary template for FL Studio project files
+//  Category: Audio
+// File Mask: *.flp
+//  ID Bytes: 46 4C 68 64 (FLhd)
+//   History: 
+//     1.0 - Initial release
+//------------------------------------------------
+RequiresVersion(14);
+
+typedef char FourCC[4];
+
+const int S_BYTE = 0;
+const int S_WORD = 64;
+const int S_DWORD = 128;
+const int S_DATA = 192;
+
+LittleEndian();
+
+typedef struct {
+    FourCC magic <bgcolor=cGreen>;
+    int32 headerSize <bgcolor=cPurple>;
+    int16 fmt <bgcolor=cAqua>;
+    int16 channelCount <bgcolor=cYellow>;
+    int16 ppq <bgcolor=cRed>;
+    FourCC dataMagic <bgcolor=cGreen>;
+    int32 eventSize <bgcolor=cPurple>;
+} FLPHeader;
+
+FLPHeader header;
+
+if (header.magic != "FLhd") {
+    Warning("File is not a valid FLP file. Template stopped.");
+    return -1;
+}
+
+
+if (header.dataMagic != "FLdt") {
+    Warning("Invalid data segment magic. Template stopped.");
+    return -1;
+}
+
+string EventNameFunc(ubyte &id) {
+    switch (id) {
+        case 0: return "Is Channel Enabled";
+        case 2: return "Channel Volume (Byte)";
+        case 3: return "Channel Panning (Byte)";
+        case 9: return "Project Loop Active";
+        case 10: return "Show Project Info";
+        case 11: return "Rack Swing";
+        case 12: return "Project Volume *";
+        case 13: return "Fit Rack To Steps";
+        case 15: return "Is Channel Zipped";
+        case 17: return "Time Signature Numerator";
+        case 18: return "Time Signature Denominator";
+        case 20: return "Is Channel Ping Pong Loop Enabled";
+        case 21: return "Channel Type";
+        case 22: return "Channel Routed To";
+        case 23: return "Project Pan Law";
+        case 26: return "Pattern Looped";
+        case 28: return "Project Licensed";
+        case 29: return "Mixer APDC";
+        case 30: return "Patterns Should Play Truncated Notes";
+        case 32: return "Is Channel Locked";
+        case 33: return "Time Marker Numerator";
+        case 34: return "Time Marker Denominator";
+        case 64: return "New Channel";
+        case 65: return "New Pattern";
+        case 66: return "Project Coarse Tempo *";
+        case 67: return "Currently Selected Patterns";
+        case 69: return "Channel Frequency Tilt";
+        case 70: return "Channel FX Flags";
+        case 71: return "Channel Cutoff";
+        case 72: return "Channel Volume (Word)";
+        case 73: return "Channel Panning (Word)";
+        case 74: return "Channel Preamp";
+        case 75: return "Channel Fade Out";
+        case 76: return "Channel Fade In";
+        case 77: return "Dot Note *";
+        case 78: return "Dot Pitch *";
+        case 79: return "Dot Mix *";
+        case 80: return "Project Global Pitch";
+        case 83: return "Channel Resonance";
+        case 84: return "Loop Bar *";
+        case 85: return "Channel Stereo Delay";
+        case 86: return "Channel Pogo";
+        case 87: return "Dot Resonance *";
+        case 88: return "Dot Cutoff *";
+        case 89: return "Channel Time Shift";
+        case 91: return "Dot *";
+        case 92: return "Dot Shift *";
+        case 93: return "Project Fine Tempo *";
+        case 94: return "Channel Children";
+        case 95: return "Insert Icon";
+        case 96: return "Dot Release *";
+        case 97: return "Channel Swing";
+        case 98: return "Slot Index";
+        case 99: return "New Arrangement";
+        case 100: return "Current Arrangement";
+        case 128: return "Plugin Color";
+        case 130: return "Channel Echo *";
+        case 131: return "Channel Ring Modulation";
+        case 132: return "Channel Cut Group";
+        case 133: return "Rack Window Height";
+        case 135: return "Channel Root Note";
+        case 136: return "Channel Stretch Time";
+        case 138: return "Channel Fine Tune";
+        case 139: return "Sampler Flags";
+        case 140: return "Layer Flags";
+        case 141: return "Channel Group Number";
+        case 144: return "Layer Flags";
+        case 146: return "Current Group ID";
+        case 147: return "Insert Output";
+        case 148: return "Time Marker Position";
+        case 149: return "Insert Color";
+        case 150: return "Pattern Color";
+        case 152: return "Arrangement Loop Position";
+        case 153: return "AU Sample Rate";
+        case 154: return "Insert Input";
+        case 155: return "Plugin Icon";
+        case 156: return "Project Tempo";
+        case 159: return "FL Studio Build";
+        case 160: return "Pattern Channel ID";
+        case 161: return "Channel Loop";
+        case 162: return "Pattern Loop";
+        case 164: return "Pattern Length";
+        case 192: return "Channel Name";
+        case 193: return "Pattern Name";
+        case 194: return "Project Title";
+        case 195: return "Project Comments";
+        case 196: return "Channel Sample Path";
+        case 197: return "Project URL";
+        case 198: return "RTF Comments *";
+        case 199: return "FL Studio Version";
+        case 200: return "Licensee";
+        case 201: return "Plugin Internal Name";
+        case 202: return "Project Data Path";
+        case 203: return "Plugin Name";
+        case 204: return "Insert Name";
+        case 205: return "Time Marker Name";
+        case 206: return "Project Genre";
+        case 207: return "Project Artists";
+        case 209: return "Channel Delay";
+        case 212: return "Plugin Wrapper";
+        case 213: return "Plugin Data";
+        case 215: return "Channel Parameters";
+        case 217: return "Playlist Selection";
+        case 218: return "Channel Envelope LFO";
+        case 219: return "Channel Levels";
+        case 220: return "Channel Filter *";
+        case 221: return "Channel Polyphony";
+        case 223: return "Pattern Controllers";
+        case 224: return "Pattern Notes";
+        case 225: return "Mixer Parameters";
+        case 226: return "MIDI Controller";
+        case 227: return "Remote Controller";
+        case 228: return "Channel Tracking";
+        case 229: return "Channel Level Adjusts";
+        case 230: return "Controller Formula";
+        case 231: return "Display Group Name";
+        case 233: return "Arrangement Playlist";
+        case 234: return "Channel Automation";
+        case 235: return "Insert Routing";
+        case 236: return "Insert Flags";
+        case 237: return "Project Timestamp";
+        case 238: return "Track Data";
+        case 239: return "Track Name";
+        case 241: return "Arrangement Name";
+        default: return "";
+    }
+}
+
+typedef struct {
+    local int64 value = 0;
+    local int32 i = 0;
+    while (true) {
+        ubyte b;
+        value |= (b & 127) << (7 * i);
+        if(!(b & 128)) {
+            break;
+        }
+        i++;
+    }
+} VarInt;
+
+typedef struct {
+    ubyte red <bgcolor=0x0000ff>;
+    ubyte green <bgcolor=0x00ff00>;
+    ubyte blue <bgcolor=0xff0000>;
+    ubyte unused <hidden=true>;
+} Color;
+
+typedef struct {
+    double delta <bgcolor=0xbef23c>;
+    double value <bgcolor=0xc9167b>;
+    float tension <bgcolor=0x6fc1c6>;
+    uint16 tensionType <bgcolor=0xba9771>;
+    ubyte isSelected <bgcolor=0x0fc612>;
+    byte tensionSign <bgcolor=0x9270aa>;  // 2 = t==0, 1 = t<0, -1 = t>0
+} AutomationPoint;
+
+typedef struct {
+    uint32 position <bgcolor=0x08d5e0>;
+    uint16 flags <bgcolor=0x85448c>;
+    uint16 rack <bgcolor=0xc93c6b>;
+    uint32 duration <bgcolor=0x2f9dd8>;
+    uint16 key <bgcolor=0xd36d37>;
+    int16 group <bgcolor=0x35c44f>;
+    int16 pitch <bgcolor=0x7225d1>;
+    ubyte release <bgcolor=0xc3d34c>;
+    ubyte midiChannel <bgcolor=0x3192aa>;
+    ubyte pan <bgcolor=0xd6268d>;
+    ubyte velocity <bgcolor=0x77d14b>;
+    ubyte modX <bgcolor=0x2aea30>;
+    ubyte modY <bgcolor=0x39e3ef>;
+} Note;
+
+typedef struct {
+    int32 u1 <bgcolor=0x5e6360>;
+    ubyte paramId <bgcolor=0xcce293>;
+    ubyte u2 <bgcolor=0x5e6360>;
+    uint16 slot : 6 <bgcolor=0xab27b5>;
+    uint16 insert : 7 <bgcolor=0x5cabd6>;
+    uint16 type : 3 <bgcolor=0xb75697>;
+    uint32 data <bgcolor=0xb23556>;
+} MixerParam;
+
+typedef struct {
+    ubyte id <bgcolor=cSilver>;
+    if (id < S_WORD) {
+        byte value <bgcolor=cBlue>;
+    } else if (id < S_DWORD) {
+        int16 value <bgcolor=cBlue>;
+    } else if (id < S_DATA) {
+        switch (id) {
+            case 132:
+                int16 cutGroup <bgcolor=0x2aea30>;
+                int16 cutBy <bgcolor=0x39e3ef>;
+                break;
+            default:
+                int32 value <bgcolor=cBlue>;
+                break;
+        }
+    } else {
+        VarInt length <bgcolor=cLtBlue>;
+        switch (id) {
+            case 209:
+                int32 feedback <bgcolor=0x77d14b>;
+                int32 pan <bgcolor=0xd6268d>;
+                int32 pitchShift <bgcolor=0x7225d1>;
+                int32 echoes <bgcolor=0x2f9dd8>;
+                int32 time <bgcolor=0x08d5e0>;
+                break;
+            case 212:
+                int32 mixerInsert <bgcolor=0x5cabd6>;
+                int32 mixerSlot <bgcolor=0xab27b5>;
+                int32 u1 <bgcolor=0x5e6360>;
+                int32 u2 <bgcolor=0x5e6360>;
+                uint32 flags <bgcolor=0x85448c>;
+                uint32 page <bgcolor=0x35c44f>;
+                int32 u3 <bgcolor=0x5e6360>;
+                int32 u4 <bgcolor=0x5e6360>;
+                int32 u5 <bgcolor=0x5e6360>;
+                int32 x <bgcolor=0x2aea30>;
+                int32 y <bgcolor=0x39e3ef>;
+                uint32 width <bgcolor=0xab27b5>;
+                uint32 height <bgcolor=0xe2e224>;
+                break;
+            case 215:
+                int32 simSynthTempo <bgcolor=0x2f9dd8>;
+                ubyte spectrumView <bgcolor=0x7225d1>;
+                ubyte multiChannelWaveformView <bgcolor=0xcce293>;
+                int16 u1 <bgcolor=0x5e6360>;
+                ubyte useRiff <bgcolor=0xba9771>;
+                ubyte removeDc <bgcolor=0xcce293>;
+                ubyte delayFlags <bgcolor=0x85448c>;
+                ubyte keyboardPitch <bgcolor=0x7225d1>;
+                int32 simSynthKeyboardPitch <bgcolor=0x77d14b>;
+                int32 drumSynthKeyboardPitch <bgcolor=0x77d14b>;
+                float tone <bgcolor=0x35c44f>;
+                float overtone <bgcolor=0xc93c6b>;
+                float noise <bgcolor=0x7225d1>;
+                float noiseBand <bgcolor=0x2f9dd8>;
+                float timeStretch <bgcolor=0xcce293>;
+                int32 arpDirection <bgcolor=0x35c44f>;
+                int32 arpRange <bgcolor=0xc93c6b>;
+                int32 arpChord <bgcolor=0x7225d1>;
+                int32 arpTime <bgcolor=0x2f9dd8>;
+                int32 arpGate <bgcolor=0xcce293>;
+                ubyte arpSlide <bgcolor=0x3192aa>;
+                ubyte u2 <bgcolor=0x5e6360>;
+                ubyte fullPorta <bgcolor=0xbef23c>;
+                ubyte addRoot <bgcolor=0x9270aa>;
+                int16 timeGate <bgcolor=0x39e3ef>;
+                int16 u3 <bgcolor=0x5e6360>;
+                int32 keyRegionMin <bgcolor=0x35c44f>;
+                int32 keyRegionMax <bgcolor=0x35c44f>;
+                int32 layerCrossfade <bgcolor=0xc9167b>;
+                ubyte normalize <bgcolor=0x77d14b>;
+                ubyte inverted <bgcolor=0xc3d34c>;
+                ubyte u4 <bgcolor=0x5e6360>;
+                ubyte declickMode <bgcolor=0x0fc612>;
+                int32 crossfade <bgcolor=0xc9167b>;
+                int32 trim <bgcolor=0xab27b5>;
+                int32 arpRepeat <bgcolor=0x77d14b>;
+                int32 stretchTime <bgcolor=0x08d5e0>;
+                int32 stretchPitch <bgcolor=0x7225d1>;
+                int32 stretchMultiplier <bgcolor=0xba9771>;
+                int32 stretchMode <bgcolor=0xb23556>;
+                int32 pitchRange <bgcolor=0x7225d1>;
+                int32 u5[3] <bgcolor=0x5e6360>;
+                double fxStart <bgcolor=0x2aea30>;
+                double fxEnd <bgcolor=0x39e3ef>;
+                int32 u6 <bgcolor=0x5e6360>;
+                float playbackStart <bgcolor=0x08d5e0>;
+                int32 u7 <bgcolor=0x5e6360>;
+                ubyte reverseRegions <bgcolor=0x39e3ef>;
+                ubyte fixTrim <bgcolor=0xdda640>;
+                int16 u8 <bgcolor=0x5e6360>;
+                double formantShift <bgcolor=0x77d14b>;
+                break;
+            case 218:
+                int32 flags <bgcolor=0x85448c>;
+                int32 envelopeEnabled <bgcolor=0x2aea30>;
+                int32 envelopePredelay <bgcolor=0xc93c6b>;
+                int32 envelopeAttack <bgcolor=0x7225d1>;
+                int32 envelopeHold <bgcolor=0x2f9dd8>;
+                int32 envelopeDecay <bgcolor=0xcce293>;
+                int32 envelopeSustain <bgcolor=0x3192aa>;
+                int32 envelopeRelease <bgcolor=0x9270aa>;
+                int32 envelopeAmount <bgcolor=0x08d5e0>;
+                int32 lfoPredelay <bgcolor=0xc93c6b>;
+                int32 lfoAttack <bgcolor=0x7225d1>;
+                int32 lfoAmount <bgcolor=0x08d5e0>;
+                int32 lfoSpeed <bgcolor=0xba9771>;
+                int32 lfoShape <bgcolor=0xb23556>;
+                int32 envelopeAttackTension <bgcolor=0xdda640>;
+                int32 envelopeDecayTension <bgcolor=0x77d14b>;
+                int32 envelopeReleaseTension <bgcolor=0x7225d1>;
+                break;
+            case 219:
+                int32 pan <bgcolor=0xd6268d>;
+                int32 volume <bgcolor=0xdda640>;
+                int32 pitch <bgcolor=0x7225d1>;
+                int32 modX <bgcolor=0x2aea30>;
+                int32 modY <bgcolor=0x39e3ef>;
+                int32 filterType <bgcolor=0xb75697>;
+                break;
+            case 221:
+                int32 max <bgcolor=0x77d14b>;
+                int32 slide <bgcolor=0x7225d1>;
+                enum<ubyte> {None=0, Mono=1, Porta=2} type <bgcolor=0x85448c>;
+                break;
+            case 224:
+                Note notes[length.value / 24];
+                break;
+            case 225:
+                MixerParam params[length.value / 12];
+                break;
+            case 227:
+                uint16 internalParam <bgcolor=0xcce293>;
+                int32 automationChannel <bgcolor=0x2e69e8>;
+                uint16 u1 <bgcolor=0x5e6360>;
+                uint16 targetParam <bgcolor=0xbfe82e>;
+                uint16 generatorChannel <bgcolor=0xc73ce0>;
+                uint32 params <bgcolor=0xb23556>;
+                uint32 smoothingFactor <bgcolor=0xe0bf3a>;
+                break;
+            case 228:
+                int32 mid <bgcolor=0x2f9dd8>;
+                int32 pan <bgcolor=0xd6268d>;
+                int32 modX <bgcolor=0x2aea30>;
+                int32 modY <bgcolor=0x39e3ef>;
+                break;
+            case 229:
+                int32 pan <bgcolor=0xd6268d>;
+                int32 volume <bgcolor=0xdda640>;
+                int32 pitch <bgcolor=0x7225d1>;
+                int32 modX <bgcolor=0x2aea30>;
+                int32 modY <bgcolor=0x39e3ef>;
+                break;
+            case 234:
+                int32 version <bgcolor=0x22f9e0>;
+                int32 lfoAmount <bgcolor=0xe2e224>;
+                ubyte dontMultiplyEnvelopeLevel <bgcolor=0x2467e2>;
+                int32 u1 <bgcolor=0x5e6360>;
+                int32 u2 <bgcolor=0x5e6360>;
+                int32 numPoints <bgcolor=0xb75697>;
+                AutomationPoint points[numPoints];
+                
+                ubyte unknown1[44] <bgcolor=0x777761>;
+                
+                int32 numLFOPoints <bgcolor=0xb75697>;
+                AutomationPoint lfoPoints[numLFOPoints];
+                
+                ubyte unknown2[20] <bgcolor=0x777761>;
+                
+                int32 lfoSpeed <bgcolor=0x5fdd6c>;
+                int32 lfoTension <bgcolor=0x8bc643>;
+                int32 lfoSkew <bgcolor=0x5cabd6>;
+                int32 lfoPulseWidth <bgcolor=0xab27b5>;
+                float lfoOffset <bgcolor=0x81539e>;
+                break;
+            case 235:
+                uchar routes[length.value];  // should always be 127 bytes long
+                break;
+            case 238:
+                int32 idx <bgcolor=0x35c44f>;
+                Color color <bgcolor=0x7225d1>;
+                int32 icon <bgcolor=0xbfe82e>;
+                ubyte enabled <bgcolor=0x0fc612>;
+                float height <bgcolor=0xe2e224>;
+                int32 lockedHeight <bgcolor=0x39e3ef>;
+                ubyte contentLocked <bgcolor=0x5cabd6>;
+                int32 motion <bgcolor=0x85448c>;
+                int32 press <bgcolor=0x81539e>;
+                int32 triggerSync <bgcolor=0xab27b5>;
+                uint32 queued <bgcolor=0x5cabd6>;
+                uint32 tolerant <bgcolor=0x8bc643>;
+                int32 positionSync <bgcolor=0x5cabd6>;
+                ubyte grouped <bgcolor=0x35c44f>;
+                ubyte locked <bgcolor=0x0f12c6>;
+                ubyte solo <bgcolor=0x0fc612>;
+                int32 trackMode <bgcolor=0xb75697>;
+                int32 targetAudioChannel <bgcolor=0x2e69e8>;
+                int32 targetInstChannel <bgcolor=0xc73ce0>;
+                ubyte expanded <bgcolor=0xe0bf3a>;
+                int32 instTrackEditMode <bgcolor=0xb23556>;
+                break;
+            default:
+                uchar data[length.value] <bgcolor=cBlue>;
+                break;
+        }
+    }
+} Event;
+        
+
+while(!FEof()) {
+    Event event <comment=EventNameFunc(this.id)>;
+}
