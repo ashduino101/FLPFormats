@@ -1,0 +1,38 @@
+typedef struct {
+    int32 pan;
+    int32 shape;
+    int32 coarsePitch;
+    int32 finePitch;
+    int32 phaseOffset;
+    int32 detune;
+} Osc;
+
+int32 version;
+
+Osc osc1;
+int32 osc2mix;
+Osc osc2;
+int32 osc3mix;
+Osc osc3;
+
+int32 phaseRand;
+ubyte invOsc1;
+ubyte invOsc2;
+ubyte invOsc3;
+ubyte amOsc3;
+if (version < 14) {
+    ubyte hq;
+} else {
+    int32 hq;
+    Envelope panEnv;
+    Envelope volEnv;
+    Envelope modXEnv;
+    Envelope modYEnv;
+    Envelope pitchEnv;
+    int32 _ustdPan;
+    int32 _ustdVolume;
+    int32 modX;
+    int32 modY;
+    int32 _ustdPitch;
+    int32 filterType;
+}
