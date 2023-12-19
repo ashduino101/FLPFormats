@@ -1,0 +1,40 @@
+typedef struct {
+    int32 flags;
+    int32 envelopeEnabled;
+    int32 envelopePredelay;
+    int32 envelopeAttack;
+    int32 envelopeHold;
+    int32 envelopeDecay;
+    int32 envelopeSustain;
+    int32 envelopeRelease;
+    int32 envelopeAmount;
+    int32 lfoPredelay;
+    int32 lfoAttack;
+    int32 lfoAmount;
+    int32 lfoSpeed;
+    int32 lfoShape;
+    int32 envelopeAttackTension;
+    int32 envelopeDecayTension;
+    int32 envelopeReleaseTension;
+} Envelope;
+
+typedef struct {
+    double delta;
+    double value;
+    float tension;
+    uint16 tensionType;
+    ubyte isSelected;
+    byte tensionSign;  // 2 = t==0, 1 = t<0, -1 = t>0
+} Point;
+
+typedef struct {
+    int32 u1;
+    int32 u2;
+    uint32 length;
+    Point points[length];
+    uint32 flags;
+    int32 mode;
+    int32 u3;
+    int32 u4;
+    int32 u5;
+} PointCollection;
