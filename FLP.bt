@@ -45,6 +45,9 @@ if (header.dataMagic != "FLdt") {
     return -1;
 }
 
+local uint16 build = 0;
+local string currentPlugin;
+
 string EventNameFunc(ubyte &id) {
     switch (id) {
         case 0: return "Is Channel Enabled";
@@ -202,7 +205,19 @@ typedef struct {
     uint16 tensionType <bgcolor=0xba9771>;
     ubyte isSelected <bgcolor=0x0fc612>;
     byte tensionSign <bgcolor=0x9270aa>;  // 2 = t==0, 1 = t<0, -1 = t>0
-} AutomationPoint;
+} Point;
+
+typedef struct {
+    int32 u1;
+    int32 u2;
+    uint32 length;
+    Point points[length];
+    uint32 flags;
+    int32 mode;
+    int32 u3;
+    int32 u4;
+    int32 u5;
+} PointCollection;
 
 typedef struct {
     uint32 position <bgcolor=0x08d5e0>;
@@ -231,6 +246,39 @@ typedef struct {
 } MixerParam;
 
 typedef struct {
+    uint32 position;
+    uint16 patternBase;
+    uint16 itemIndex;
+    int32 length;
+    uint16 idx;
+    uint16 group;
+    uint16 u1;
+    int16 flags;
+    uint32 u2;
+    if (itemIndex >= patternBase) {
+        int32 startOffset;
+        int32 endOffset;
+    } else {
+        float startOffset;
+        float endOffset;
+    }
+    if (build >= 2964) {
+        int32 id;  // increment by 1 for each item placed
+        float fadeIn;
+        float fadeInTension;
+        float fadeOut;
+        float fadeOutTension;
+        float gain;
+        ubyte shouldFadeIn : 1;
+        ubyte shouldFadeOut : 1;
+        ubyte flags : 6;
+        ubyte fadeInTensionType : 4;
+        ubyte fadeOutTensionType : 4;
+        ubyte new[2];
+    }
+} PlaylistItem;
+
+typedef struct {
     ubyte id <bgcolor=cSilver>;
     if (id < S_WORD) {
         byte value <bgcolor=cBlue>;
@@ -242,6 +290,10 @@ typedef struct {
                 int16 cutGroup <bgcolor=0x2aea30>;
                 int16 cutBy <bgcolor=0x39e3ef>;
                 break;
+            case 159:
+                int32 value <bgcolor=cBlue>;
+                build = value;
+                break;
             default:
                 int32 value <bgcolor=cBlue>;
                 break;
@@ -249,6 +301,10 @@ typedef struct {
     } else {
         VarInt length <bgcolor=cLtBlue>;
         switch (id) {
+            case 201:
+                wchar_t value[length.value / 2];
+                currentPlugin = value;
+                break;
             case 209:
                 int32 feedback <bgcolor=0x77d14b>;
                 int32 pan <bgcolor=0xd6268d>;
@@ -270,6 +326,53 @@ typedef struct {
                 int32 y <bgcolor=0x39e3ef>;
                 uint32 width <bgcolor=0xab27b5>;
                 uint32 height <bgcolor=0xe2e224>;
+                break;
+            case 213:
+                if (currentPlugin == "Fruity Convolver") {
+                    uint16 u1;  // 3
+                    uint16 u2;  // 15
+                    uint32 dryMix;
+                    uint32 wetMix;
+                    int32 dryStereoSeparation;
+                    int32 wetStereoSeparation;
+                    byte mode;
+                    if (mode == 0) {
+                        ubyte u3;  // 0
+                        ubyte pathLen;
+                        char path[pathLen];
+                        uint32 sampleLen;
+                        ubyte sample[sampleLen];
+                    } else {
+                        ubyte pathLen;
+                        char path[pathLen];    
+                    }
+                    double startOffset;
+                    double endOffset;
+                    double sampleStart;
+                    double sampleEnd;
+                    float u4;  // 0.02
+                    
+                    PointCollection panEnvelope;
+                    PointCollection volumeEnvelope;
+                    PointCollection stereoEnvelope;
+                    PointCollection allEnvelope;
+                    
+                    PointCollection impulseResponse;
+                    
+                    ubyte noAutoscroll;
+                    ubyte keystrokePriority;  // 0
+                    ubyte u7;  // 1
+                    ubyte normalize;
+                    uint32 latency;
+                    int32 display;
+                    int32 delay;
+                    int32 selfConv;
+                    int32 stretch;
+                    int32 eq;
+                    break;
+                } else {
+                    ubyte data[length.value];
+                }
                 break;
             case 215:
                 int32 simSynthTempo <bgcolor=0x2f9dd8>;
@@ -384,21 +487,22 @@ typedef struct {
                 int32 modX <bgcolor=0x2aea30>;
                 int32 modY <bgcolor=0x39e3ef>;
                 break;
+            case 233:
+                if (build < 2964) {
+                    PlaylistItem items[length.value / 32];
+                } else {
+                    PlaylistItem items[length.value / 60];
+                }
+                break;
             case 234:
                 int32 version <bgcolor=0x22f9e0>;
                 int32 lfoAmount <bgcolor=0xe2e224>;
                 ubyte dontMultiplyEnvelopeLevel <bgcolor=0x2467e2>;
-                int32 u1 <bgcolor=0x5e6360>;
-                int32 u2 <bgcolor=0x5e6360>;
-                int32 numPoints <bgcolor=0xb75697>;
-                AutomationPoint points[numPoints];
+                PointCollection points;
                 
-                ubyte unknown1[44] <bgcolor=0x777761>;
+                ubyte unknown1[16] <bgcolor=0x777761>;
                 
-                int32 numLFOPoints <bgcolor=0xb75697>;
-                AutomationPoint lfoPoints[numLFOPoints];
-                
-                ubyte unknown2[20] <bgcolor=0x777761>;
+                PointCollection lfoPoints;
                 
                 int32 lfoSpeed <bgcolor=0x5fdd6c>;
                 int32 lfoTension <bgcolor=0x8bc643>;
