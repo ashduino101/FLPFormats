@@ -29,7 +29,7 @@ PointCollection allEnvelope;
 PointCollection impulseResponse;
 
 ubyte noAutoscroll;
-ubyte u6;  // 0
+ubyte handleKeystrokesBeforeHost;
 ubyte u7;  // 1
 ubyte normalize;
 uint32 latency;
