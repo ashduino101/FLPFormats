@@ -1,0 +1,42 @@
+//------------------------------------------------
+//--- 010 Editor v14.0.1 Binary Template
+//
+//      File: BassDrum
+//   Authors: ashduino101
+//   Version: 1.0.0
+//   Purpose: Type definition for BassDrum preset data
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 1.0.0: Initial release
+//------------------------------------------------
+
+LittleEndian();
+
+char header[4];  // 1kiK (could also be ED1K?)
+char name[256];
+char samplePath[1024];
+
+float outputLevel;
+float samplingRatio;
+float duration;
+float butt;
+float drive;
+float attack;
+float base;
+float peak;
+float slideTime;
+float varBase;
+float varPeak;
+float varSlide;
+float varPhase;
+float clickCut;
+float clickFreq;
+float clickAmount;
+float noiseA;
+float noiseD;
+float noiseS;
+float noiseStart;
+float noisePitch;
+float noiseMix;
+float noiseFilter;
