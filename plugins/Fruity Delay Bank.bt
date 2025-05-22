@@ -1,3 +1,18 @@
+//------------------------------------------------
+//--- 010 Editor v14.0.1 Binary Template
+//
+//      File: Fruity Delay Bank
+//   Authors: ashduino101
+//   Version: 1.0.0
+//   Purpose: Type definition for Fruiy Delay Bank preset data
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 1.0.0: Initial release
+//------------------------------------------------
+
+LittleEndian();
+
 typedef struct {
     int pan;
     int volume;
