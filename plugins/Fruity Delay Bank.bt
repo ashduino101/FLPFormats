@@ -1,0 +1,43 @@
+typedef struct {
+    int pan;
+    int volume;
+    int inFilterCut;
+    int inFilterRes;
+    int inFilterGain;
+    int feedbackPan;
+    int feedbackVolume;
+    int feedbackSep;
+    int feedbackTime;
+    int feedbackOffset;
+    int fbFilterCut;
+    int fbFilterRes;
+    int fbFilterGain;
+    int outPan;
+    int outVol;
+    int toNext;
+} Params;
+
+typedef struct {
+    int filterType;
+    int filterMode;
+    int fbFilterType;
+    int fbFilterMode;
+    uint8 filterPost;
+    int feedbackMode;
+    int grainDiv;
+    int grainShape;
+    uint8 enabled;
+    uint8 leaveFirstEcho;
+    uint8 tempoBasedTime;
+} Params2;
+
+int version;
+int dryMix;
+int wetMix;
+int inLevel;
+int feedbackLevel;
+
+Params params[8];
+int oversample;
+
+Params2 newParams[8];
