@@ -3,13 +3,14 @@
 //
 //      File: FLP.bt
 //   Authors: ashduino101
-//   Version: 1.0
+//   Version: 1.1
 //   Purpose: Binary template for FL Studio project files
 //  Category: Audio
 // File Mask: *.flp
 //  ID Bytes: 46 4C 68 64 (FLhd)
 //   History: 
 //     1.0 - Initial release
+//     1.1 - lots of new plugins
 //------------------------------------------------
 RequiresVersion(14);
 
@@ -46,7 +47,12 @@ if (header.dataMagic != "FLdt") {
 }
 
 local uint16 build = 0;
+local string version = "00.00";
 local string currentPlugin;
+
+ubyte VersionGTE(string major) {
+    return version[0] > major[0] || (version[0] == major[0] && version[1] >= major[1]);
+}
 
 string EventNameFunc(ubyte &id) {
     switch (id) {
@@ -67,11 +73,20 @@ string EventNameFunc(ubyte &id) {
         case 23: return "Project Pan Law";
         case 26: return "Pattern Looped";
         case 28: return "Project Licensed";
-        case 29: return "Mixer APDC";
+        case 29: return "Mixer Automatic Plugin Delay Compensation (APDC)";
         case 30: return "Patterns Should Play Truncated Notes";
+        case 31: return "Performance Mode";
         case 32: return "Is Channel Locked";
-        case 33: return "Time Marker Numerator";
-        case 34: return "Time Marker Denominator";
+        case 33: return "Time Signature Numerator";
+        case 34: return "Time Signature Denominator";
+        case 35: return "Time Signature Type";
+        case 40: return "Fast Declick For Cut Groups";
+        case 43: return "??";  // confirmed boolean, but what is it?
+        case 44: return "Automatic Crossfades";
+        case 45: return "Key Signature Type";
+        case 46: return "Key Signature Key";
+        case 47: return "Copy Samples To Project Folder";
+        case 48: return "Channel Truncate Swing Notes";
         case 64: return "New Channel";
         case 65: return "New Pattern";
         case 66: return "Project Coarse Tempo *";
@@ -132,6 +147,10 @@ string EventNameFunc(ubyte &id) {
         case 161: return "Channel Loop";
         case 162: return "Pattern Loop";
         case 164: return "Pattern Length";
+        case 165: return "Included In Recording";
+        case 166: return "Monitor External Input";
+        case 167: return "Data Folder Mode";
+        case 168: return "Key Signature Mode";
         case 192: return "Channel Name";
         case 193: return "Pattern Name";
         case 194: return "Project Title";
@@ -152,6 +171,7 @@ string EventNameFunc(ubyte &id) {
         case 212: return "Plugin Wrapper";
         case 213: return "Plugin Data";
         case 215: return "Channel Parameters";
+        case 216: return "Initial Parameter Positions";
         case 217: return "Playlist Selection";
         case 218: return "Channel Envelope LFO";
         case 219: return "Channel Levels";
@@ -169,11 +189,13 @@ string EventNameFunc(ubyte &id) {
         case 233: return "Arrangement Playlist";
         case 234: return "Channel Automation";
         case 235: return "Insert Routing";
-        case 236: return "Insert Flags";
+        case 236: return "Insert Options";  // float trackLatency; u32 flags; float inputLatency  
         case 237: return "Project Timestamp";
         case 238: return "Track Data";
         case 239: return "Track Name";
         case 241: return "Arrangement Name";
+        case 242: return "Playlist Zoom";
+        case 243: return "Scale Highlighting";
         default: return "";
     }
 }
@@ -195,7 +217,7 @@ typedef struct {
     ubyte red <bgcolor=0x0000ff>;
     ubyte green <bgcolor=0x00ff00>;
     ubyte blue <bgcolor=0xff0000>;
-    ubyte unused <hidden=true>;
+    ubyte alpha <hidden=true>;  // maybe unused
 } Color;
 
 typedef struct {
@@ -244,6 +266,13 @@ typedef struct {
     uint16 type : 3 <bgcolor=0xb75697>;
     uint32 data <bgcolor=0xb23556>;
 } MixerParam;
+
+typedef struct {
+    uint32 u1;
+    uint16 targetParam;
+    uint16 generatorChannel;
+    uint32 initialPosition;
+} InitialPosition;
 
 typedef struct {
     uint32 position;
@@ -301,6 +330,10 @@ typedef struct {
     } else {
         VarInt length <bgcolor=cLtBlue>;
         switch (id) {
+            case 199:
+                char value[length.value];
+                version = value;
+                break;
             case 201:
                 wchar_t value[length.value / 2];
                 currentPlugin = value;
@@ -330,7 +363,7 @@ typedef struct {
             case 213:
                 if (currentPlugin == "Fruity Convolver") {
                     uint16 u1;  // 3
-                    uint16 u2;  // 15
+                    uint16 version;  // 15
                     uint32 dryMix;
                     uint32 wetMix;
                     int32 dryStereoSeparation;
@@ -363,14 +396,604 @@ typedef struct {
                     ubyte keystrokePriority;  // 0
                     ubyte u7;  // 1
                     ubyte normalize;
-                    uint32 latency;
+                    if (version >= 15) {
+                        uint32 latency;
+                    }
                     int32 display;
                     int32 delay;
                     int32 selfConv;
                     int32 stretch;
                     int32 eq;
                     break;
+                } else if (currentPlugin == "Fruity Delay Bank") {
+                    int version;
+                    int dryMix;
+                    int wetMix;
+                    int inLevel;
+                    int feedbackLevel;
+                    typedef struct {
+                        int pan;
+                        int volume;
+                        int inFilterCut;
+                        int inFilterRes;
+                        int inFilterGain;
+                        int feedbackPan;
+                        int feedbackVolume;
+                        int feedbackSep;
+                        int feedbackTime;
+                        int feedbackOffset;
+                        int fbFilterCut;
+                        int fbFilterRes;
+                        int fbFilterGain;
+                        int outPan;
+                        int outVol;
+                        int toNext;
+                    } Params;
+                    
+                    Params modules[8];
+                    int oversample;
+                    
+                    typedef struct {
+                        int filterType;
+                        int filterMode;
+                        int fbFilterType;
+                        int fbFilterMode;
+                        uint8 filterPost;
+                        int feedbackMode;
+                        int grainDiv;
+                        int grainShape;
+                        uint8 enabled;
+                        uint8 leaveFirstEcho;
+                        uint8 tempoBasedTime;
+                    } Params2;
+                    
+                    Params2 newParams[8];
+                } else if (currentPlugin == "Fruity Delay 2") {
+                    int inPan;
+                    int inVol;
+                    int dryVol;
+                    int feedbackVol;
+                    int feedbackTime;
+                    int feedbackOffset;
+                    int feedbackMode;
+                    int feedbackCutoff;
+                } else if (currentPlugin == "Fruity Delay") {
+                    int version;
+                    int input;
+                    int feedback;
+                    int cutoff;
+                    int tempo;
+                    int steps;
+                    int mode;
+                } else if (currentPlugin == "Fruity Reeverb") {
+                    int version;
+                    int lowCut;
+                    int highCut;
+                    int delay;
+                    int roomSize;
+                    int diff;
+                    int color;
+                    int decay;
+                    int highDamp;
+                    int dry;
+                    int reverb;
+                } else if (currentPlugin == "Fruity Blood Overdrive") {
+                    int version;
+                    int preBand;
+                    int color;
+                    int preAmp;
+                    int x100;
+                    int postFilter;
+                    int postGain;
+                    int theme;
+                    int _unused;  // always written as 0
+                } else if (currentPlugin == "Fruity Fast Dist") {
+                    int pre;
+                    int thresh;
+                    int type;
+                    int mix;
+                    int post;
+                } else if (currentPlugin == "Fruity Soft Clipper") {
+                    int thresh;
+                    int post;
+                } else if (currentPlugin == "Fruity Squeeze") {
+                    int version;
+                    int gain;
+                    int mix;
+                    int squarizeAmount;
+                    int filterEnabled;
+                    int filterType;
+                    int filterRes;
+                    int filterCut;
+                    int filterPos;
+                    int puncherRel;
+                    int puncherImpact;
+                    int puncherPreserve;
+                    int puncherAmount;
+                } else if (currentPlugin == "Fruity Reeverb 2") {
+                    int version;
+                    int lowCut;
+                    int highCut;
+                    int delay;
+                    int size;
+                    int diff;
+                    int decay;
+                    int damp;
+                    int bass;
+                    int cross;
+                    int sep;
+                    int dry;
+                    int er;
+                    int wet;
+                    int speed;
+                    int mod;
+                    uint8 tempo;
+                    uint8 side;
+                } else if (currentPlugin == "Fruity WaveShaper") {
+                    int32 version;
+                    int32 pre;
+                    int32 mix;
+                    int32 post;
+                    uint8 bipolar;
+                    uint8 center;
+                    int32 oversampleMode;
+                    PointCollection points;
+                    int32 showSettings;
+                    uint8 highQuality;
+                    uint8 oversample;
+                } else if (currentPlugin == "Fruity Compressor") {
+                    int version;
+                    int threshold;
+                    int ratio;
+                    int gain;
+                    int attack;
+                    int release;
+                    int type;
+                    int reportLatency;
+                    
+                } else if (currentPlugin == "Fruity Limiter") {
+                    int version;
+                    
+                    typedef struct {
+                        int gain;
+                        int sat;
+                        int ceil;
+                        int attack;
+                        int attackCurve;
+                        int release;
+                        int releaseCurve;
+                        int sustain;
+                        int compThres;
+                        int compRatio;
+                        int compKnee;
+                        int compAttack;
+                        int compRelease;
+                        int compCurve;
+                        int compSustain;
+                        int noiseGateGain;
+                        int noiseGateThres;
+                        int noiseGateRel;
+                    } LimiterState;
+                    
+                    LimiterState mainState;
+                    LimiterState spareState;
+                    
+                    int speed;
+                    int activeWindow;
+                    uint8 showInputPeaks;
+                    uint8 showOutputPeaks;
+                    uint8 showAnalysisAndGain;
+                    uint8 showLevel;
+                    int isPaused;
+                    int compSidechain;
+                    uint8 unsafeHeadroom;
+                } else if (currentPlugin == "Fruity Multiband Compressor") {
+                    int version;
+                    int gain;
+                    int limiter;
+                    int filterType;
+                    
+                    int highState;
+                    int highFreq;
+                    int highGain;
+                    int highThres;
+                    int highRatio;
+                    int highAttack;
+                    int highRelease;
+                    int highKnee;
+                    
+                    int midState;
+                    int midFreqH;
+                    int midFreqL;
+                    int midGain;
+                    int midThres;
+                    int midRatio;
+                    int midAttack;
+                    int midRelease;
+                    int midKnee;
+                    
+                    int lowState;
+                    int lowFreq;
+                    int lowGain;
+                    int lowThres;
+                    int lowRatio;
+                    int lowAttack;
+                    int lowRelease;
+                    int lowKnee;
+                    
+                    uint8 mainMonitorOut;
+                    uint8 lowMonitorOut;
+                    uint8 midMonitorOut;
+                    uint8 highMonitorOut;
+                    
+                    int speed;
+                } else if (currentPlugin == "Soundgoodizer") {
+                    int version;
+                    int mode;
+                    int amount;
+                } else if (currentPlugin == "Transient Processor") {
+                    int version;
+                    int attack;
+                    int drive;
+                    int release;
+                    int gain;
+                    int attackShape;
+                    int releaseShape;
+                    int splitFreq;
+                    int splitBalance;
+                    int effect;
+                    ubyte viewFlags;  // input = 1, output = 2, curve = 4
+                    int isPaused;
+                    int speed;
+                } else if (currentPlugin == "Frequency Splitter") {
+                    int version;
+                    int lowMidFreq;
+                    int midHighFreq;
+                    int lowMidSlope;
+                    int midHighSlope;
+                    int linearPhase;
+                    int numBands;
+                    int linPhaseQuality;
+                    int linPhaseModSpeed;
+                    int low;
+                    int mid;
+                    int high;
+                    int lowGain;
+                    int midGain;
+                    int highGain;
+                    
+                    int lowSend;
+                    int midSend;
+                    int highSend;
+                    int monitor;
+                    int monitorMode;
+                    int bandFlags;
+                    int muteFlags;
+                    uint8 basicFlags;
+                    int monitorInput;
+                    int pivotSlope;
+                    int freqPrecision;
+                    int timeSmoothing;
+                    int range;
+                    int heatmapPosition;
+                } else if (currentPlugin == "Fruity Filter") {
+                    int version;
+                    int cutoff;
+                    int res;
+                    int lowPass;
+                    int bandPass;
+                    int highPass;
+                    int x2;
+                    uint8 center;
+                } else if (currentPlugin == "Fruity Parametric EQ 2") {
+                    int version;
+                    
+                    typedef struct {
+                        int bandLevels[7];
+                        int freqLevels[7];
+                        int bandWidthLevels[7];
+                        int bandTypes[7];
+                        int bandOrder[7];
+                        int mainLevel;
+                    } EQState;
+                    
+                    EQState mainState;
+                    EQState spareState;
+                    
+                    int highQuality;
+                    int highHeatmapPrecision;
+                    uint8 viewBandTokens;
+                    int monitorMode;
+                    int reducedHeatmapFreq;
+                    int linearPhase;
+                    int linearPhaseModSpeed;
+                    
+                    uint8 flags;
+                    int activeBands;
+                    
+                    int monitorInput;
+                    int bandSoloOnShift;
+                    int pivotSlope;
+                    int freqPrecision;
+                    int timeSmoothing;
+                    int histogramRange;
+                    int heatmapPosition;
+                    int minPhaseModSpeed;
+                } else if (currentPlugin == "Fruity Parametric EQ") {
+                    int bandLevels[7];
+                    int freqLevels[7];
+                    int bandWidthLevels[7];
+                    int bandTypes[7];
+                    int mainLevel;
+                } else if (currentPlugin == "Fruity Chorus") {
+                    int version;
+                    int delay;
+                    int depth;
+                    int stereo;
+                    int lfo1Freq;
+                    int lfo2Freq;
+                    int lfo3Freq;
+                    int lfo1Wave;
+                    int lfo2Wave;
+                    int lfo3Wave;
+                    int crossType;
+                    int crossCutoff;
+                    int wetOnly;
+                } else if (currentPlugin == "Fruity Flanger") {
+                    int version;
+                    int delay;
+                    int depth;
+                    int rate;
+                    int phase;
+                    int damp;
+                    int shape;
+                    int feed;
+                    int invertFeedback;
+                    int invertWet;
+                    int dry;
+                    int wet;
+                    int cross;
+                } else if (currentPlugin == "Fruity Flangus") {
+                    int order;
+                    int depth;
+                    int speed;
+                    int delay;
+                    int spread;
+                    int cross;
+                    int dry;
+                    int wet;
+                } else if (currentPlugin == "Fruity Phaser") {
+                    int version;
+                    int sweepFreq;
+                    int minDepth;
+                    int maxDepth;
+                    int freqRange;
+                    int stereo;
+                    int numStages;
+                    int feedback;
+                    int dryWet;
+                    int outGain;
+                } else if (currentPlugin == "Fruity Balance") {
+                    int balance;
+                    int volume;
+                } else if (currentPlugin == "Fruity PanOMatic") {
+                    int panning;
+                    int volume;
+                    int lfoShape;
+                    int lfoTarget;
+                    int lfoAmount;
+                    int lfoSpeed;
+                } else if (currentPlugin == "Fruity Send") {
+                    int pan;
+                    int volume;
+                    int dry;
+                    int sendTo;
+                } else if (currentPlugin == "Fruity Stereo Enhancer") {
+                    int pan;
+                    int volume;
+                    int stereoSeparation;
+                    int phaseOffset;
+                    int phasePosition;
+                    int phaseInversion;
+                } else if (currentPlugin == "Fruity Stereo Shaper") {
+                    int version;
+                    int rightIntoLeft;
+                    int left;
+                    int right;
+                    int leftIntoRight;
+                    int delay;
+                    int phase;
+                    int inOutDifference;
+                    int effectPosition;
+                } else if (currentPlugin == "Frequency Shifter") {
+                    int version;
+                    int mix;
+                    int type;
+                    int frequency;
+                    int lrPhase;
+                    int leftShape;
+                    int rightShape;
+                    int feedback;
+                    int stereo;
+                    int freqType;
+                    int startPhase;
+                    int unused;  // always written as 0
+                    int sidechain;
+                } else if (currentPlugin == "Fruity Scratcher") {
+                    int version;
+                    float wavePos;
+                    float finalVol;
+                    float speed;
+                    float accel;
+                    float pan;
+                    float vol;
+                    float hold;
+                    float sensitivity;
+                    float transport;
+                    float smooth1;
+                    float smooth2;
+                    float smooth3;
+                    float smooth4;
+                    float rotations;
+                    int pathLen;
+                    char path[pathLen];
+                    byte viewMode;
+                    int timecodeType;
+                    uint8 riaaPreamp;
+                } else if (currentPlugin == "Hyper Chorus") {
+                    int version;
+                    int delay;
+                    int feedback;
+                    int modRate;
+                    int modAmount;
+                    int moveAmount;
+                    int movementRate;
+                    int delayLines;
+                    int lowPass;
+                    int highPass;
+                    int mix;
+                    int lfoPhaseDiff;
+                    int displayScaling;
+                } else if (currentPlugin == "Spreader") {
+                    int version;
+                    int spread;
+                    int stereoSeparation;
+                    int lowFreqBypass;
+                    int mono;
+                    int enabled;
+                    int theme;
+                    uint8 preFX;
+                    uint8 postFX;
+                } else if (currentPlugin == "Fruity Big Clock") {
+                    uint8 version;
+                    uint8 beat;  // step = 0, beat = 1
+                    int color;
+                } else if (currentPlugin == "Fruity HTML NoteBook") {
+                    int version;
+                    uint8 pathLen;
+                    if (pathLen == 0xFF) {
+                        uint32 pathLen;
+                    }
+                    char path[pathLen];
+                } else if (currentPlugin == "Fruity NoteBook 2" || currentPlugin == "Fruity NoteBook") {
+                    int version;
+                    int currentPage;
+                    
+                    if (currentPlugin == "Fruity NoteBook") {
+                        typedef struct {
+                            int length;
+                            char content[length];
+                        } NoteBook1Page;
+                        
+                        while (true) {
+                            int pageIndex;
+                            if (pageIndex == -1) break;
+                            NoteBook1Page page;
+                        }
+                    } else {
+                        typedef struct {
+                            VarInt length;
+                            wchar_t content[length.value];
+                        } NoteBook2Page;
+                        
+                        while (true) {
+                            int pageIndex;
+                            if (pageIndex == -1) break;
+                            NoteBook2Page page;
+                        }
+                    }
+                    
+                    uint8 canEdit;
+                } else if (currentPlugin == "Fruity Spectroman") {
+                    int version;
+                    int outputMode;
+                    int amp;
+                    int scale;
+                    uint8 windowing;
+                    uint8 showPeaks;
+                    uint8 stereo;
+                } else if (currentPlugin == "Razer Chroma") {
+                    int version;
+                    int amplitude;
+                    int outMode;
+                    int decay;
+                    int colorMode;
+                    int keyboardEnabled;
+                    int chromaLinkEnabled;
+                    int headsetEnabled;
+                    int mouseEnabled;
+                    int mouseMatEnabled;
+                    int keypadEnabled;
+                } else if (currentPlugin == "Tuner") {
+                    int version;
+                    int reference;
+                    int reactivity;
+                    int bassMode;
+                    int displayMode;
+                } else if (currentPlugin == "ZGameEditor Visualizer") {
+                    int length;
+                    char project[length];
+                } else if (currentPlugin == "3x Osc") {
+                    typedef struct {
+                        int32 pan;
+                        int32 shape;
+                        int32 coarsePitch;
+                        int32 finePitch;
+                        int32 phaseOffset;
+                        int32 detune;
+                    } Osc;
+                    
+                    typedef struct {
+                        int32 flags <bgcolor=0x85448c>;
+                        int32 envelopeEnabled <bgcolor=0x2aea30>;
+                        int32 envelopePredelay <bgcolor=0xc93c6b>;
+                        int32 envelopeAttack <bgcolor=0x7225d1>;
+                        int32 envelopeHold <bgcolor=0x2f9dd8>;
+                        int32 envelopeDecay <bgcolor=0xcce293>;
+                        int32 envelopeSustain <bgcolor=0x3192aa>;
+                        int32 envelopeRelease <bgcolor=0x9270aa>;
+                        int32 envelopeAmount <bgcolor=0x08d5e0>;
+                        int32 lfoPredelay <bgcolor=0xc93c6b>;
+                        int32 lfoAttack <bgcolor=0x7225d1>;
+                        int32 lfoAmount <bgcolor=0x08d5e0>;
+                        int32 lfoSpeed <bgcolor=0xba9771>;
+                        int32 lfoShape <bgcolor=0xb23556>;
+                        int32 envelopeAttackTension <bgcolor=0xdda640>;
+                        int32 envelopeDecayTension <bgcolor=0x77d14b>;
+                        int32 envelopeReleaseTension <bgcolor=0x7225d1>;
+                    } Env;
+                    
+                    int32 version;
+                    
+                    Osc osc1;
+                    int32 osc2mix;
+                    Osc osc2;
+                    int32 osc3mix;
+                    Osc osc3;
+                    
+                    int32 phaseRand;
+                    ubyte invOsc1;
+                    ubyte invOsc2;
+                    ubyte invOsc3;
+                    ubyte amOsc3;
+                    if (version < 14) {
+                        ubyte hq;
+                    } else {
+                        int32 hq;
+                        Env panEnv;
+                        Env volEnv;
+                        Env modXEnv;
+                        Env modYEnv;
+                        Env pitchEnv;
+                        int32 _ustdPan;
+                        int32 _ustdVolume;
+                        int32 modX;
+                        int32 modY;
+                        int32 _ustdPitch;
+                        int32 filterType;
+                    }
                 } else {
+                    Printf("Unknown plugin format for %s\n", currentPlugin);
                     ubyte data[length.value];
                 }
                 break;
@@ -416,16 +1039,24 @@ typedef struct {
                 int32 stretchMultiplier <bgcolor=0xba9771>;
                 int32 stretchMode <bgcolor=0xb23556>;
                 int32 pitchRange <bgcolor=0x7225d1>;
-                int32 u5[3] <bgcolor=0x5e6360>;
-                double fxStart <bgcolor=0x2aea30>;
-                double fxEnd <bgcolor=0x39e3ef>;
-                int32 u6 <bgcolor=0x5e6360>;
-                float playbackStart <bgcolor=0x08d5e0>;
-                int32 u7 <bgcolor=0x5e6360>;
-                ubyte reverseRegions <bgcolor=0x39e3ef>;
-                ubyte fixTrim <bgcolor=0xdda640>;
-                int16 u8 <bgcolor=0x5e6360>;
-                double formantShift <bgcolor=0x77d14b>;
+                int32 receiveNotesInput <bgcolor=0x5e6360>;
+                int32 receiveNotesChannel <bgcolor=0x5e6360>;
+                ubyte midiChannelThrough;
+                if (VersionGTE("20")) {
+                    ubyte u7[3];
+                    double fxStart <bgcolor=0x2aea30>;
+                    double fxEnd <bgcolor=0x39e3ef>;
+                    int32 u8 <bgcolor=0x5e6360>;
+                    float playbackStart <bgcolor=0x08d5e0>;
+                    int32 u9 <bgcolor=0x5e6360>;
+                    ubyte reverseRegions <bgcolor=0x39e3ef>;
+                    ubyte fixTrim <bgcolor=0xdda640>;
+                    int16 u10 <bgcolor=0x5e6360>;
+                    double formantShift <bgcolor=0x77d14b>;
+                }
+                break;
+            case 216:
+                InitialPosition positions[length.value / 12];
                 break;
             case 218:
                 int32 flags <bgcolor=0x85448c>;
@@ -467,8 +1098,8 @@ typedef struct {
                 break;
             case 227:
                 uint16 internalParam <bgcolor=0xcce293>;
-                int32 automationChannel <bgcolor=0x2e69e8>;
-                uint16 u1 <bgcolor=0x5e6360>;
+                int16 automationChannel <bgcolor=0x2e69e8>;
+                uint32 u1 <bgcolor=0x5e6360>;
                 uint16 targetParam <bgcolor=0xbfe82e>;
                 uint16 generatorChannel <bgcolor=0xc73ce0>;
                 uint32 params <bgcolor=0xb23556>;
@@ -489,9 +1120,9 @@ typedef struct {
                 break;
             case 233:
                 if (build < 2964) {
-                    PlaylistItem items[length.value / 32];
+                    PlaylistItem items[length.value / 32] <optimize=false>;
                 } else {
-                    PlaylistItem items[length.value / 60];
+                    PlaylistItem items[length.value / 60] <optimize=false>;
                 }
                 break;
             case 234:
@@ -530,11 +1161,20 @@ typedef struct {
                 ubyte grouped <bgcolor=0x35c44f>;
                 ubyte locked <bgcolor=0x0f12c6>;
                 ubyte solo <bgcolor=0x0fc612>;
-                int32 trackMode <bgcolor=0xb75697>;
-                int32 targetAudioChannel <bgcolor=0x2e69e8>;
-                int32 targetInstChannel <bgcolor=0xc73ce0>;
-                ubyte expanded <bgcolor=0xe0bf3a>;
-                int32 instTrackEditMode <bgcolor=0xb23556>;
+                if (VersionGTE("20")) {
+                    int32 trackMode <bgcolor=0xb75697>;
+                    int32 targetAudioChannel <bgcolor=0x2e69e8>;
+                    int32 targetInstChannel <bgcolor=0xc73ce0>;
+                    ubyte expanded <bgcolor=0xe0bf3a>;
+                    int32 instTrackEditMode <bgcolor=0xb23556>;
+                }
+                break;
+            case 242:
+                uint32 u1;
+                double xPan;
+                double xZoom;
+                uint32 yPan;
+                uint32 yZoom;
                 break;
             default:
                 uchar data[length.value] <bgcolor=cBlue>;
