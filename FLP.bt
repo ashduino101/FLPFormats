@@ -10,7 +10,7 @@
 //  ID Bytes: 46 4C 68 64 (FLhd)
 //   History: 
 //     1.0 - Initial release
-//     1.1 - lots of new plugins
+//     1.1 - 100% event coverage in FL 2025
 //------------------------------------------------
 RequiresVersion(14);
 
@@ -49,9 +49,17 @@ if (header.dataMagic != "FLdt") {
 local uint16 build = 0;
 local string version = "00.00";
 local string currentPlugin;
+local byte trialKey = 0;
+local byte arrangementKey = 0;
+local byte trackDelta = 0;
 
 ubyte VersionGTE(string major) {
+    // TODO wtf this is totally wrong
     return version[0] > major[0] || (version[0] == major[0] && version[1] >= major[1]);
+}
+
+ubyte VersionLT(string major) {
+    return version[0] < major[0];
 }
 
 string EventNameFunc(ubyte &id) {
@@ -80,13 +88,22 @@ string EventNameFunc(ubyte &id) {
         case 33: return "Time Signature Numerator";
         case 34: return "Time Signature Denominator";
         case 35: return "Time Signature Type";
+        case 36: return "Arrangement Trial Lock";
+        case 37: return "Trial Key";
+        case 38: return "Master Visible";
+        case 39: return "Mixer Compensate Automations";
         case 40: return "Fast Declick For Cut Groups";
-        case 43: return "??";  // confirmed boolean, but what is it?
+        case 41: return "Use Custom Color";
+        case 42: return "Use Legacy Display";  // it just makes the text brighter?? i don't know why
+        case 43: return "Track Trial Lock";
         case 44: return "Automatic Crossfades";
         case 45: return "Key Signature Type";
         case 46: return "Key Signature Key";
         case 47: return "Copy Samples To Project Folder";
         case 48: return "Channel Truncate Swing Notes";
+        case 49: return "Bypass Track Latency Compensation";
+        case 50: return "Channel Trial Lock";
+        case 51: return "Channel Trial Lock 2";
         case 64: return "New Channel";
         case 65: return "New Pattern";
         case 66: return "Project Coarse Tempo *";
@@ -120,6 +137,8 @@ string EventNameFunc(ubyte &id) {
         case 98: return "Slot Index";
         case 99: return "New Arrangement";
         case 100: return "Current Arrangement";
+        case 103: return "Mixer Insert Count";
+        case 104: return "Target Mixer Track";
         case 128: return "Plugin Color";
         case 130: return "Channel Echo *";
         case 131: return "Channel Ring Modulation";
@@ -131,7 +150,9 @@ string EventNameFunc(ubyte &id) {
         case 139: return "Sampler Flags";
         case 140: return "Layer Flags";
         case 141: return "Channel Group Number";
+        case 143: return "Sample Flags";
         case 144: return "Layer Flags";
+        case 145: return "Channel Filter Number";
         case 146: return "Current Group ID";
         case 147: return "Insert Output";
         case 148: return "Time Marker Position";
@@ -151,6 +172,8 @@ string EventNameFunc(ubyte &id) {
         case 166: return "Monitor External Input";
         case 167: return "Data Folder Mode";
         case 168: return "Key Signature Mode";
+        case 169: return "Compatibility Flags";
+        case 170: return "Channel Trial Lock 3";
         case 192: return "Channel Name";
         case 193: return "Pattern Name";
         case 194: return "Project Title";
@@ -196,7 +219,9 @@ string EventNameFunc(ubyte &id) {
         case 241: return "Arrangement Name";
         case 242: return "Playlist Zoom";
         case 243: return "Scale Highlighting";
-        default: return "";
+        default:
+            Printf("Unknown event %d!!!", id);
+            return "";
     }
 }
 
@@ -305,12 +330,30 @@ typedef struct {
         ubyte fadeOutTensionType : 4;
         ubyte new[2];
     }
+    if (VersionGTE("25")) {
+        ubyte newer[20];
+    }
 } PlaylistItem;
 
 typedef struct {
     ubyte id <bgcolor=cSilver>;
     if (id < S_WORD) {
         byte value <bgcolor=cBlue>;
+        switch (id) {
+            case 37:
+                trialKey = value;
+                break;
+            case 36:
+                arrangementKey = value;
+                break;
+            case 43:
+                // just keeping this here because it seems to always be trialKey + 1 (except for the first iteration)
+                // (it would make sense for it to be +1 because a trial key of 1 indicates a license)
+                local byte delta = trackDelta - value;
+                trackDelta = value;
+                // Printf("d=%d\n", delta);
+                break;
+        }
     } else if (id < S_DWORD) {
         int16 value <bgcolor=cBlue>;
     } else if (id < S_DATA) {
@@ -334,8 +377,19 @@ typedef struct {
                 char value[length.value];
                 version = value;
                 break;
+            case 200:
+                if (VersionLT("11")) {
+                    char value[length.value];
+                } else {
+                    wchar_t value[length.value / 2];
+                }
+                break;
             case 201:
-                wchar_t value[length.value / 2];
+                if (VersionLT("11")) {
+                    char value[length.value];
+                } else {
+                    wchar_t value[length.value / 2];
+                }
                 currentPlugin = value;
                 break;
             case 209:
@@ -525,8 +579,10 @@ typedef struct {
                     int dry;
                     int er;
                     int wet;
-                    int speed;
-                    int mod;
+                    if (version > 10000) {
+                        int speed;
+                        int mod;
+                    }
                     uint8 tempo;
                     uint8 side;
                 } else if (currentPlugin == "Fruity WaveShaper") {
@@ -538,9 +594,11 @@ typedef struct {
                     uint8 center;
                     int32 oversampleMode;
                     PointCollection points;
-                    int32 showSettings;
-                    uint8 highQuality;
-                    uint8 oversample;
+                    if (version > 4) {
+                        int32 showSettings;
+                        uint8 highQuality;
+                        uint8 oversample;
+                    }
                 } else if (currentPlugin == "Fruity Compressor") {
                     int version;
                     int threshold;
@@ -586,7 +644,9 @@ typedef struct {
                     uint8 showLevel;
                     int isPaused;
                     int compSidechain;
-                    uint8 unsafeHeadroom;
+                    if (version > 6) {
+                        uint8 unsafeHeadroom;
+                    }
                 } else if (currentPlugin == "Fruity Multiband Compressor") {
                     int version;
                     int gain;
@@ -704,21 +764,23 @@ typedef struct {
                     int highHeatmapPrecision;
                     uint8 viewBandTokens;
                     int monitorMode;
-                    int reducedHeatmapFreq;
-                    int linearPhase;
-                    int linearPhaseModSpeed;
-                    
-                    uint8 flags;
-                    int activeBands;
-                    
-                    int monitorInput;
-                    int bandSoloOnShift;
-                    int pivotSlope;
-                    int freqPrecision;
-                    int timeSmoothing;
-                    int histogramRange;
-                    int heatmapPosition;
-                    int minPhaseModSpeed;
+                    if (version > 2) {
+                        int reducedHeatmapFreq;
+                        int linearPhase;
+                        int linearPhaseModSpeed;
+                        
+                        uint8 flags;
+                        int activeBands;
+                        
+                        int monitorInput;
+                        int bandSoloOnShift;
+                        int pivotSlope;
+                        int freqPrecision;
+                        int timeSmoothing;
+                        int histogramRange;
+                        int heatmapPosition;
+                        int minPhaseModSpeed;
+                    }
                 } else if (currentPlugin == "Fruity Parametric EQ") {
                     int bandLevels[7];
                     int freqLevels[7];
@@ -978,6 +1040,9 @@ typedef struct {
                     ubyte amOsc3;
                     if (version < 14) {
                         ubyte hq;
+                        if (version < 13) {
+                            ubyte old1;
+                        }
                     } else {
                         int32 hq;
                         Env panEnv;
@@ -992,12 +1057,42 @@ typedef struct {
                         int32 _ustdPitch;
                         int32 filterType;
                     }
+                } else if (currentPlugin == "FL Keys") {
+                    int version;
+                    byte presetLength;
+                    char presetName[presetLength];
+                    int decay;
+                    int release;
+                    int hardness;
+                    int velToHardness;
+                    int muffle;
+                    int velToMuffle;
+                    int sensitivity;
+                    int stereo;
+                    int tune;
+                    int detune;
+                    int stretch;
+                    int treble;
+                    int pan;
+                    int lfo;
+                    int overdrive;
+                } else if (currentPlugin == "BooBass") {
+                    int version;
+                    int bass;
+                    int mid;
+                    int treble;
+                } else if (currentPlugin == "!") {
+
                 } else {
                     Printf("Unknown plugin format for %s\n", currentPlugin);
                     ubyte data[length.value];
                 }
                 break;
             case 215:
+                if (VersionLT("20")) {
+                       ubyte data[length.value];  // idk
+                       break;
+                }
                 int32 simSynthTempo <bgcolor=0x2f9dd8>;
                 ubyte spectrumView <bgcolor=0x7225d1>;
                 ubyte multiChannelWaveformView <bgcolor=0xcce293>;
@@ -1121,6 +1216,8 @@ typedef struct {
             case 233:
                 if (build < 2964) {
                     PlaylistItem items[length.value / 32] <optimize=false>;
+                } else if (VersionGTE("25")) {
+                    PlaylistItem items[length.value / 80] <optimize=false>;
                 } else {
                     PlaylistItem items[length.value / 60] <optimize=false>;
                 }
@@ -1159,14 +1256,19 @@ typedef struct {
                 uint32 tolerant <bgcolor=0x8bc643>;
                 int32 positionSync <bgcolor=0x5cabd6>;
                 ubyte grouped <bgcolor=0x35c44f>;
-                ubyte locked <bgcolor=0x0f12c6>;
-                ubyte solo <bgcolor=0x0fc612>;
+                if (VersionGTE("12")) {
+                    ubyte locked <bgcolor=0x0f12c6>;
+                    ubyte solo <bgcolor=0x0fc612>;
+                }
                 if (VersionGTE("20")) {
                     int32 trackMode <bgcolor=0xb75697>;
                     int32 targetAudioChannel <bgcolor=0x2e69e8>;
                     int32 targetInstChannel <bgcolor=0xc73ce0>;
                     ubyte expanded <bgcolor=0xe0bf3a>;
                     int32 instTrackEditMode <bgcolor=0xb23556>;
+                }
+                if (VersionGTE("25")) {
+                    int32 showGhostNotes;
                 }
                 break;
             case 242:
@@ -1187,3 +1289,4 @@ typedef struct {
 while(!FEof()) {
     Event event <comment=EventNameFunc(this.id)>;
 }
+// Printf("Trial data: %d %d %d\n", trialKey, arrangementKey, trackDelta);
