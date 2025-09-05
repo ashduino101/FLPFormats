@@ -3,14 +3,15 @@
 //
 //      File: FLP.bt
 //   Authors: ashduino101
-//   Version: 1.1
+//   Version: 1.2
 //   Purpose: Binary template for FL Studio project files
 //  Category: Audio
 // File Mask: *.flp
 //  ID Bytes: 46 4C 68 64 (FLhd)
 //   History: 
 //     1.0 - Initial release
-//     1.1 - 100% event coverage in FL 2025
+//     1.1 - full FL 25 support (almost)
+//     1.2 - fix up some mistakes
 //------------------------------------------------
 RequiresVersion(14);
 
@@ -54,15 +55,22 @@ local byte arrangementKey = 0;
 local byte trackDelta = 0;
 
 ubyte VersionGTE(string major) {
-    // TODO wtf this is totally wrong
-    return version[0] > major[0] || (version[0] == major[0] && version[1] >= major[1]);
+    // not sure why this is like this but maybe you can't compare strings here?
+    return (version[0] > major[0] && (version[1] != '.')) || (version[0] == major[0] && version[1] >= major[1]);
 }
 
 ubyte VersionLT(string major) {
-    return version[0] < major[0];
+    return version[0] < major[0] || (version[0] == major[0] && version[1] < major[1]);
 }
 
 string EventNameFunc(ubyte &id) {
+    // FIXME: I suspected some of the unknown events
+    // were trial-related just because they contained
+    // ciphered data in trial mode and were sequential in id, 
+    // but all integer events are ciphered, could they be
+    // something else?
+    // The track ones are weird because usually they 
+    // add data straight to the track item structure
     switch (id) {
         case 0: return "Is Channel Enabled";
         case 2: return "Channel Volume (Byte)";
@@ -93,17 +101,20 @@ string EventNameFunc(ubyte &id) {
         case 38: return "Master Visible";
         case 39: return "Mixer Compensate Automations";
         case 40: return "Fast Declick For Cut Groups";
-        case 41: return "Use Custom Color";
-        case 42: return "Use Legacy Display";  // it just makes the text brighter?? i don't know why
-        case 43: return "Track Trial Lock";
+        case 41: return "Use Custom Plugin Color";
+        case 42: return "Use Custom Insert Color";
+        case 43: return "Track Loop Starter Enabled";
         case 44: return "Automatic Crossfades";
         case 45: return "Key Signature Type";
         case 46: return "Key Signature Key";
         case 47: return "Copy Samples To Project Folder";
         case 48: return "Channel Truncate Swing Notes";
         case 49: return "Bypass Track Latency Compensation";
-        case 50: return "Channel Trial Lock";
-        case 51: return "Channel Trial Lock 2";
+        //case 50: return "Channel Trial Lock";
+        // bit 1: locked
+        // bit 2: is loop
+        // bit 3: show waveform preview
+        case 51: return "Loop Starter Flags";
         case 64: return "New Channel";
         case 65: return "New Pattern";
         case 66: return "Project Coarse Tempo *";
@@ -137,6 +148,7 @@ string EventNameFunc(ubyte &id) {
         case 98: return "Slot Index";
         case 99: return "New Arrangement";
         case 100: return "Current Arrangement";
+        case 101: return "Scale Keys";  // 16 bits, 12 used for the filter
         case 103: return "Mixer Insert Count";
         case 104: return "Target Mixer Track";
         case 128: return "Plugin Color";
@@ -146,8 +158,8 @@ string EventNameFunc(ubyte &id) {
         case 133: return "Rack Window Height";
         case 135: return "Channel Root Note";
         case 136: return "Channel Stretch Time";
-        case 138: return "Channel Fine Tune";
-        case 139: return "Sampler Flags";
+        case 138: return "Channel Echo Mod";
+        case 139: return "Channel Reverb";
         case 140: return "Layer Flags";
         case 141: return "Channel Group Number";
         case 143: return "Sample Flags";
@@ -155,7 +167,7 @@ string EventNameFunc(ubyte &id) {
         case 145: return "Channel Filter Number";
         case 146: return "Current Group ID";
         case 147: return "Insert Output";
-        case 148: return "Time Marker Position";
+        case 148: return "Time Marker Position/Type";
         case 149: return "Insert Color";
         case 150: return "Pattern Color";
         case 152: return "Arrangement Loop Position";
@@ -163,6 +175,8 @@ string EventNameFunc(ubyte &id) {
         case 154: return "Insert Input";
         case 155: return "Plugin Icon";
         case 156: return "Project Tempo";
+        case 157: return "157";  // FIXME
+        case 158: return "Pattern Linked Channel";
         case 159: return "FL Studio Build";
         case 160: return "Pattern Channel ID";
         case 161: return "Channel Loop";
@@ -173,7 +187,7 @@ string EventNameFunc(ubyte &id) {
         case 167: return "Data Folder Mode";
         case 168: return "Key Signature Mode";
         case 169: return "Compatibility Flags";
-        case 170: return "Channel Trial Lock 3";
+        case 170: return "Loop Starter Mode";
         case 192: return "Channel Name";
         case 193: return "Pattern Name";
         case 194: return "Project Title";
@@ -219,8 +233,14 @@ string EventNameFunc(ubyte &id) {
         case 241: return "Arrangement Name";
         case 242: return "Playlist Zoom";
         case 243: return "Scale Highlighting";
+        case 245: return "Loop Starter Loop";
+        case 246: return "Loop Starter Channel Name";
+        case 247: return "Loop Starter Genre";
+        case 248: return "Loop Starter Data";
+        case 249: return "Loop Starter History";
+        case 250: return "Loop Starter Filter";
         default:
-            Printf("Unknown event %d!!!", id);
+            Printf("Unknown event %d!\n", id);
             return "";
     }
 }
@@ -249,21 +269,22 @@ typedef struct {
     double delta <bgcolor=0xbef23c>;
     double value <bgcolor=0xc9167b>;
     float tension <bgcolor=0x6fc1c6>;
-    uint16 tensionType <bgcolor=0xba9771>;
+    byte tensionType <bgcolor=0xba9771>;
+    byte arpeggiatorBreak <bgcolor=0xaef23c>;
     ubyte isSelected <bgcolor=0x0fc612>;
     byte tensionSign <bgcolor=0x9270aa>;  // 2 = t==0, 1 = t<0, -1 = t>0
 } Point;
 
 typedef struct {
-    int32 u1;
-    int32 u2;
+    int32 type;  // 1 = envelope, 2 = lfo, 3 = key
+    int32 version;  // 3 currently
     uint32 length;
     Point points[length];
-    uint32 flags;
-    int32 mode;
-    int32 u3;
-    int32 u4;
-    int32 u5;
+    int32 flags;  // 1 = tempo, 2 = global, 4 = unipolar lfo tension, 8 = frozen lfo
+    int32 mode;  // -1 = enabled, 0 = disabled
+    int32 adsrDecayPointIdx;
+    int32 adsrLoopStartPointIdx;
+    int32 adsrSustainLoopEndPointIdx;
 } PointCollection;
 
 typedef struct {
@@ -273,7 +294,8 @@ typedef struct {
     uint32 duration <bgcolor=0x2f9dd8>;
     uint16 key <bgcolor=0xd36d37>;
     int16 group <bgcolor=0x35c44f>;
-    int16 pitch <bgcolor=0x7225d1>;
+    ubyte pitch <bgcolor=0x7225d1>;
+    ubyte repeat <bgcolor=0x202572>;
     ubyte release <bgcolor=0xc3d34c>;
     ubyte midiChannel <bgcolor=0x3192aa>;
     ubyte pan <bgcolor=0xd6268d>;
@@ -286,10 +308,23 @@ typedef struct {
     int32 u1 <bgcolor=0x5e6360>;
     ubyte paramId <bgcolor=0xcce293>;
     ubyte u2 <bgcolor=0x5e6360>;
-    uint16 slot : 6 <bgcolor=0xab27b5>;
-    uint16 insert : 7 <bgcolor=0x5cabd6>;
-    uint16 type : 3 <bgcolor=0xb75697>;
-    uint32 data <bgcolor=0xb23556>;
+    if (VersionGTE("25")) {
+        uint16 value <hidden=true>;
+        local uint8 gen = value & 0b1111111111000000 == 0;
+        FSeek(FTell() - 2);
+        if (gen) {
+            uint16 generatorChannel;
+        } else {
+            uint16 insert <read=(((this & 0b1111111111000000) - 28672) / 64)>;
+            FSeek(FTell() - 2);
+            uint16 slot <read=(this & 0b111111)>;
+        }
+    } else {
+        uint16 slot : 6 <bgcolor=0xab27b5>;
+        uint16 insert : 7 <bgcolor=0x5cabd6>;
+        uint16 type : 3 <bgcolor=0xb75697>;
+    }
+    int32 data <bgcolor=0xb23556>;
 } MixerParam;
 
 typedef struct {
@@ -301,15 +336,14 @@ typedef struct {
 
 typedef struct {
     uint32 position;
-    uint16 patternBase;
-    uint16 itemIndex;
+    uint32 playlistEvent;
     int32 length;
     uint16 idx;
     uint16 group;
     uint16 u1;
     int16 flags;
     uint32 u2;
-    if (itemIndex >= patternBase) {
+    if (playlistEvent >= 0x50005000) {
         int32 startOffset;
         int32 endOffset;
     } else {
@@ -317,7 +351,7 @@ typedef struct {
         float endOffset;
     }
     if (build >= 2964) {
-        int32 id;  // increment by 1 for each item placed
+        int32 id;  // increment by 1 for each item placed, also seems to change whenever a clip parameter is changed
         float fadeIn;
         float fadeInTension;
         float fadeOut;
@@ -325,13 +359,16 @@ typedef struct {
         float gain;
         ubyte shouldFadeIn : 1;
         ubyte shouldFadeOut : 1;
-        ubyte flags : 6;
+        ubyte fadeFlags : 6;
         ubyte fadeInTensionType : 4;
         ubyte fadeOutTensionType : 4;
-        ubyte new[2];
+        short _extraFlags;
     }
     if (VersionGTE("25")) {
-        ubyte newer[20];
+        float pitchShift;
+        double stretchTime;
+        int reverseMode;
+        int reverseEpoch;
     }
 } PlaylistItem;
 
@@ -378,17 +415,17 @@ typedef struct {
                 version = value;
                 break;
             case 200:
-                if (VersionLT("11")) {
-                    char value[length.value];
-                } else {
+                if (VersionGTE("12")) {
                     wchar_t value[length.value / 2];
+                } else {
+                    char value[length.value];
                 }
                 break;
             case 201:
-                if (VersionLT("11")) {
-                    char value[length.value];
-                } else {
+                if (VersionGTE("12")) {
                     wchar_t value[length.value / 2];
+                } else {
+                    char value[length.value];
                 }
                 currentPlugin = value;
                 break;
@@ -416,7 +453,7 @@ typedef struct {
                 break;
             case 213:
                 if (currentPlugin == "Fruity Convolver") {
-                    uint16 u1;  // 3
+                    uint16 versionMinor;  // 3
                     uint16 version;  // 15
                     uint32 dryMix;
                     uint32 wetMix;
@@ -762,14 +799,15 @@ typedef struct {
                     
                     int highQuality;
                     int highHeatmapPrecision;
-                    uint8 viewBandTokens;
+                    if (version > 6) {
+                        uint8 viewBandTokens;
+                    }
                     int monitorMode;
-                    if (version > 2) {
+                    if (version > 3) {
                         int reducedHeatmapFreq;
                         int linearPhase;
                         int linearPhaseModSpeed;
                         
-                        uint8 flags;
                         int activeBands;
                         
                         int monitorInput;
@@ -781,6 +819,7 @@ typedef struct {
                         int heatmapPosition;
                         int minPhaseModSpeed;
                     }
+                    uint8 flags;
                 } else if (currentPlugin == "Fruity Parametric EQ") {
                     int bandLevels[7];
                     int freqLevels[7];
@@ -1089,11 +1128,7 @@ typedef struct {
                 }
                 break;
             case 215:
-                if (VersionLT("20")) {
-                       ubyte data[length.value];  // idk
-                       break;
-                }
-                int32 simSynthTempo <bgcolor=0x2f9dd8>;
+                int32 tempo <bgcolor=0x2f9dd8>;
                 ubyte spectrumView <bgcolor=0x7225d1>;
                 ubyte multiChannelWaveformView <bgcolor=0xcce293>;
                 int16 u1 <bgcolor=0x5e6360>;
@@ -1102,7 +1137,7 @@ typedef struct {
                 ubyte delayFlags <bgcolor=0x85448c>;
                 ubyte keyboardPitch <bgcolor=0x7225d1>;
                 int32 simSynthKeyboardPitch <bgcolor=0x77d14b>;
-                int32 drumSynthKeyboardPitch <bgcolor=0x77d14b>;
+                int32 drumSynthOrSpeechKeyboardPitch <bgcolor=0x77d14b>;
                 float tone <bgcolor=0x35c44f>;
                 float overtone <bgcolor=0xc93c6b>;
                 float noise <bgcolor=0x7225d1>;
@@ -1117,8 +1152,7 @@ typedef struct {
                 ubyte u2 <bgcolor=0x5e6360>;
                 ubyte fullPorta <bgcolor=0xbef23c>;
                 ubyte addRoot <bgcolor=0x9270aa>;
-                int16 timeGate <bgcolor=0x39e3ef>;
-                int16 u3 <bgcolor=0x5e6360>;
+                int32 timeGate <bgcolor=0x39e3ef>;
                 int32 keyRegionMin <bgcolor=0x35c44f>;
                 int32 keyRegionMax <bgcolor=0x35c44f>;
                 int32 layerCrossfade <bgcolor=0xc9167b>;
@@ -1129,14 +1163,16 @@ typedef struct {
                 int32 crossfade <bgcolor=0xc9167b>;
                 int32 trim <bgcolor=0xab27b5>;
                 int32 arpRepeat <bgcolor=0x77d14b>;
-                int32 stretchTime <bgcolor=0x08d5e0>;
+                float stretchTime <bgcolor=0x08d5e0>;
                 int32 stretchPitch <bgcolor=0x7225d1>;
                 int32 stretchMultiplier <bgcolor=0xba9771>;
                 int32 stretchMode <bgcolor=0xb23556>;
-                int32 pitchRange <bgcolor=0x7225d1>;
-                int32 receiveNotesInput <bgcolor=0x5e6360>;
-                int32 receiveNotesChannel <bgcolor=0x5e6360>;
-                ubyte midiChannelThrough;
+                if (VersionGTE("12")) {
+                    int32 pitchRange <bgcolor=0x7225d1>;
+                    int32 receiveNotesInput <bgcolor=0x5e6360>;
+                    int32 receiveNotesChannel <bgcolor=0x5e6360>;
+                    ubyte midiChannelThrough;
+                }
                 if (VersionGTE("20")) {
                     ubyte u7[3];
                     double fxStart <bgcolor=0x2aea30>;
@@ -1145,7 +1181,7 @@ typedef struct {
                     float playbackStart <bgcolor=0x08d5e0>;
                     int32 u9 <bgcolor=0x5e6360>;
                     ubyte reverseRegions <bgcolor=0x39e3ef>;
-                    ubyte fixTrim <bgcolor=0xdda640>;
+                    ubyte fixLegacyTrim <bgcolor=0xdda640>;
                     int16 u10 <bgcolor=0x5e6360>;
                     double formantShift <bgcolor=0x77d14b>;
                 }
@@ -1154,6 +1190,10 @@ typedef struct {
                 InitialPosition positions[length.value / 12];
                 break;
             case 218:
+                // env tempo sync: 1
+                // lfo tempo sync: 2
+                // preserve starting value: 4
+                // lfo global phase: 32
                 int32 flags <bgcolor=0x85448c>;
                 int32 envelopeEnabled <bgcolor=0x2aea30>;
                 int32 envelopePredelay <bgcolor=0xc93c6b>;
@@ -1239,7 +1279,7 @@ typedef struct {
                 float lfoOffset <bgcolor=0x81539e>;
                 break;
             case 235:
-                uchar routes[length.value];  // should always be 127 bytes long
+                uchar routes[length.value];  // 127 bytes long before FL 2025, variable-length now (corresponds to # inserts)
                 break;
             case 238:
                 int32 idx <bgcolor=0x35c44f>;
@@ -1259,11 +1299,11 @@ typedef struct {
                 if (VersionGTE("12")) {
                     ubyte locked <bgcolor=0x0f12c6>;
                     ubyte solo <bgcolor=0x0fc612>;
-                }
-                if (VersionGTE("20")) {
                     int32 trackMode <bgcolor=0xb75697>;
                     int32 targetAudioChannel <bgcolor=0x2e69e8>;
                     int32 targetInstChannel <bgcolor=0xc73ce0>;
+                }
+                if (VersionGTE("20")) {
                     ubyte expanded <bgcolor=0xe0bf3a>;
                     int32 instTrackEditMode <bgcolor=0xb23556>;
                 }
@@ -1277,6 +1317,14 @@ typedef struct {
                 double xZoom;
                 uint32 yPan;
                 uint32 yZoom;
+                break;
+            case 245:
+            case 246:
+            case 247:
+            case 248:
+            case 249:
+            case 250:
+                wchar_t value[length.value / 2];
                 break;
             default:
                 uchar data[length.value] <bgcolor=cBlue>;
